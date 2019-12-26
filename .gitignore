@@ -2,3 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+inst/examples/fc-demo_files*
+inst/examples/fc-demo.html
+inst/examples/libs
