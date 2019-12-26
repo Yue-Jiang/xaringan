@@ -2,6 +2,7 @@
 title: "幻灯忍者"
 subtitle: "写轮眼"
 author: "谢益辉"
+institute: "RStudio"
 date: "2016/12/12"
 output:
   xaringan::moon_reader:
@@ -13,11 +14,11 @@ output:
       countIncrementalSlides: false
 ---
 
+background-image: url(https://upload.wikimedia.org/wikipedia/commons/b/be/Sharingan_triple.svg)
+
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
 ```
-
-background-image: url(https://upload.wikimedia.org/wikipedia/commons/b/be/Sharingan_triple.svg)
 
 ???
 
@@ -28,7 +29,7 @@ class: center, middle
 
 # xaringan
 
-### /ʃæ.'riŋ.ɡæn/
+### /ʃaː.'riŋ.ɡan/
 
 ---
 class: inverse, center, middle
@@ -287,7 +288,7 @@ DT::datatable(
 
 # 一些小技能
 
-- 一页片子可以分割成一步步播放，参见[这个示例](https://slides.yihui.name/xaringan/incremental.html)。
+- 一页片子可以分割成一步步播放，参见[这个示例](https://slides.yihui.org/xaringan/incremental.html)。
 
 - 选项 `highlightLines: true` 可以让以 `*` 开头或者双重大括号 `{{ }}` 里面的代码被高亮出来；
 
@@ -325,11 +326,14 @@ if (TRUE) {
 .pull-right[
 用 `{{}}` 包裹的代码：
 
-    `r ''````{r tidy=FALSE}
-    if (TRUE) {
-    *{{ message("敲黑板！划重点！") }}
-    }
-    ```
+````
+`r ''````{r tidy=FALSE}
+if (TRUE) {
+*{{ message("敲黑板！划重点！") }}
+}
+```
+````
+
 输出：
 ```{r tidy=FALSE}
 if (TRUE) {
@@ -452,4 +456,4 @@ class: center, middle
 
 本幻灯片由 R 包 [**xaringan**](https://github.com/yihui/xaringan) 生成；
 
-查克拉来自于 [remark.js](https://remarkjs.com)、[**knitr**](http://yihui.name/knitr)、以及 [R Markdown](https://rmarkdown.rstudio.com)。
+查克拉来自于 [remark.js](https://remarkjs.com)、[**knitr**](http://yihui.org/knitr)、以及 [R Markdown](https://rmarkdown.rstudio.com)。

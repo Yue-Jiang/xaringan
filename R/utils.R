@@ -71,8 +71,8 @@ sample2 = function(x, size, ...) {
   } else sample(x, size, ...)
 }
 
-prose_index = function(x) xfun::prose_index(x)
-protect_math = function(x) xfun::protect_math(x)
+prose_index = function(...) xfun::prose_index(...)
+protect_math = function(...) xfun::protect_math(...)
 
 #' Summon remark.js to your local disk
 #'
@@ -96,10 +96,10 @@ summon_remark = function(version = 'latest', to = 'libs/') {
 # this also works with multiple lines
 highlight_code = function(x) {
   x = paste0('\n', x)  # prepend \n and remove it later
-  r = '(\n)([ \t]*)\\{\\{(.+?)\\}\\}'
-  m = gregexpr(r, x)
+  r = '(\n)([ \t]*)\\{\\{(.+?)\\}\\}(?=(\n|$))'
+  m = gregexpr(r, x, perl = TRUE)
   regmatches(x, m) = lapply(regmatches(x, m), function(z) {
-    z = gsub(r, '\\1\\2\\3', z)  # remove {{ and }}
+    z = gsub(r, '\\1\\2\\3', z, perl = TRUE)  # remove {{ and }}
     z = gsub('\n', '\n*', z)     # add * after every \n
     z
   })
@@ -140,4 +140,68 @@ open_file = function(path){
 # does the current dir look like an R package dir?
 is_package = function() {
   all(c(file.exists(c('DESCRIPTION', 'NAMESPACE')), dir.exists(c('R', 'inst'))))
+}
+
+# obtain the context of Rmd for xaringan slides
+slide_context = function(ctx = rstudioapi::getSourceEditorContext()) {
+  x = ctx$contents
+  if (length(x) < 3 || length(s <- which(x == '---')) < 2 || s[1] != 1) return()
+  if (length(grep(' xaringan::.+', x[1:s[2]])) == 0) return()
+  l = ctx$selection[[1]]$range$end[1]  # line number of cursor
+  i = prose_index(x, warn = FALSE); x2 = x; if (length(i)) x2[-i] = ''
+  s = grep('^---?$', x2)  # line numbers of slide separators; first two are YAML
+
+  # remove hidden slides from the source
+  k = unlist(lapply(grep(reg_hidden, x2), function(i) {
+    i1 = tail(s[s < i], 1); if (length(i1) == 0) i1 = 1
+    i2 = head(s[s > i], 1); if (length(i2) == 0) i2 = length(x)
+    (i1 + 1):i2
+  }))
+  if (length(k)) {
+    x[k] = ''; x2[k] = ''; s = grep('^---?$', x2)
+  }
+
+  i = which(x2 == '---')
+  n = max(sum(s <= l), 1)
+  i1 = tail(i[i <= l], 1); if (length(i1) == 0) i1 = 1
+  i2 = s[n + 1]; if (is.na(i2)) i2 = length(x)
+  txt = x[i1:i2]; i = grep('^---?$', txt)
+  if (length(i)) txt = txt[-i]
+  o = getOption('xaringan.page_number.offset', 0L)
+  # total # of pages; current page #; Markdown content of current page
+  list(
+    N = as.integer(length(s) + o), n = n + o, c = if (i1 > 1) txt
+  )
+}
+
+reg_hidden = '^(layout|exclude): true\\s*$'
+
+slide_navigate = function(ctx = rstudioapi::getSourceEditorContext(), message) {
+  if (!is.list(message) || !is.numeric(p <- message$n)) return()
+  sel = ctx$selection[[1]]
+  if (sel$text != '') return()  # when user has selected some text, don't navigate
+  l = sel$range$end[1]; x = ctx$contents
+  i = prose_index(x, warn = FALSE); x2 = x; if (length(i)) x2[-i] = ''
+  s = grep('^---?$', x2); o = getOption('xaringan.page_number.offset', 0L)
+  k = unlist(lapply(grep(reg_hidden, x2), function(i) sum(s < i)))
+  k = unique(k[k > 0])
+  if (length(k)) s = s[-k]
+  if (length(s) + o != message$N) return()
+  n = max(sum(s <= l), 1); p = p - o
+  # don't move cursor if already on the current page
+  if (n != p && p <= length(s))
+    rstudioapi::setCursorPosition(rstudioapi::document_position(s[p] + 1, 1))
+}
+
+flatten_chunk = function(x) {
+  if (length(i <- grep(knitr::all_patterns$md$chunk.begin, x)) == 0) return(x)
+  k = grepl('\\W(echo|include)\\s*=\\s*FALSE\\W', x[i])
+  x[i][!k] = gsub('\\{.+', '', x[i][!k])
+  x[i][k]  = gsub('\\{.+', '.hidden', x[i][k])
+  x
+}
+
+process_slide = function(x) {
+  x = protect_math(flatten_chunk(x))
+  paste(x, collapse = '\n')
 }

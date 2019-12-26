@@ -82,6 +82,7 @@ moon_reader = function(
   }
   tmp_js = tempfile('xaringan', fileext = '.js')  # write JS config to this file
   tmp_md = tempfile('xaringan', fileext = '.md')  # store md content here (bypass Pandoc)
+  options(xaringan.page_number.offset = if (seal) 0L else -1L)
 
   play_js = if (is.numeric(autoplay <- nature[['autoplay']]) && autoplay > 0)
     sprintf('setInterval(function() {slideshow.gotoNextSlide();}, %d);', autoplay)
@@ -91,6 +92,9 @@ moon_reader = function(
     '(%s)(%d);', pkg_file('js/countdown.js'), countdown
   )
 
+  hl_pre_js = if (isTRUE(nature$highlightLines))
+    pkg_file('js/highlight-pre-parent.js')
+
   if (is.null(title_cls <- nature[['titleSlideClass']]))
     title_cls = c('center', 'middle', 'inverse')
   title_cls = paste(c(title_cls, 'title-slide'), collapse = ', ')
@@ -99,6 +103,7 @@ moon_reader = function(
   for (i in c('countdown', 'autoplay', 'beforeInit', 'titleSlideClass')) nature[[i]] = NULL
 
   write_utf8(as.character(tagList(
+    tags$style(`data-target` = 'print-only', '@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}'),
     tags$script(src = chakra),
     if (is.character(before)) if (self_contained) {
       tags$script(HTML(file_content(before)))
@@ -107,8 +112,8 @@ moon_reader = function(
     },
     tags$script(HTML(paste(c(sprintf(
       'var slideshow = remark.create(%s);', if (length(nature)) xfun::tojson(nature) else ''
-    ), pkg_file('js/show-widgets.js'), pkg_file('js/print-css.js'),
-    play_js, countdown_js), collapse = '\n')))
+    ), pkg_file(c('js/show-widgets.js', 'js/print-css.js', 'js/after.js')),
+    play_js, countdown_js, hl_pre_js), collapse = '\n')))
   )), tmp_js)
 
   html_document2 = function(
@@ -205,6 +210,7 @@ tsukuyomi = function(...) moon_reader(...)
 #' @param moon The input Rmd file path (if missing and in RStudio, the current
 #'   active document is used).
 #' @param cast_from The root directory of the server.
+#' @param params Passed to \code{rmarkdown::\link[rmarkdown]{render}()}.
 #' @references \url{http://naruto.wikia.com/wiki/Infinite_Tsukuyomi}
 #' @note This function is not really tied to the output format
 #'   \code{\link{moon_reader}()}. You can use it to serve any single-HTML-file R
@@ -212,34 +218,28 @@ tsukuyomi = function(...) moon_reader(...)
 #' @seealso \code{servr::\link{httw}}
 #' @export
 #' @rdname inf_mr
-infinite_moon_reader = function(moon, cast_from = '.') {
+infinite_moon_reader = function(moon, cast_from = '.', params = NULL) {
   # when this function is called via the RStudio addin, use the dir of the
   # current active document
   if (missing(moon) && requireNamespace('rstudioapi', quietly = TRUE)) {
-    context_fun = tryCatch(
-      getFromNamespace('getSourceEditorContext', 'rstudioapi'),
-      error = function(e) rstudioapi::getActiveDocumentContext
-    )
-    moon = context_fun()[['path']]
-    if (is.null(moon)) stop('Cannot find the current active document in RStudio')
-    if (moon == '') stop(
-      'Please click the RStudio source editor first, or save the current document'
-    )
-    if (!grepl('[.]R?md', moon, ignore.case = TRUE)) stop(
+    moon = rstudioapi::getSourceEditorContext()[['path']]
+    if (is.null(moon)) stop('Cannot find an open document in the RStudio editor')
+    if (moon == '') stop('Please save the current document')
+    if (!grepl('[.]R?md$', moon, ignore.case = TRUE)) stop(
       'The current active document must be an R Markdown document. I saw "',
       basename(moon), '".'
     )
   }
   moon = normalize_path(moon)
   rebuild = function() {
-    rmarkdown::render(moon, envir = globalenv(), encoding = 'UTF-8')
+    rmarkdown::render(moon, envir = parent.frame(2), params = params)
   }
   html = NULL
   # rebuild if moon or any dependencies (CSS/JS/images) have been updated
   build = local({
     # if Rmd is inside a package, listen to changes under the inst/ dir,
     # otherwise watch files under the dir of the moon
-    d = if (is_package()) 'inst' else dirname(moon)
+    d = if (p <- is_package()) 'inst' else dirname(moon)
     files = if (getOption('xaringan.inf_mr.aggressive', TRUE)) function() {
       c(list.files(
         d, '[.](css|js|png|gif|jpeg)$', full.names = TRUE, recursive = TRUE
@@ -247,12 +247,39 @@ infinite_moon_reader = function(moon, cast_from = '.') {
     } else function() moon
     mtime = function() file.info(files())[, 'mtime']
     html <<- normalize_path(rebuild())  # render Rmd initially
-    l = max(mtime())  # record the latest timestamp of files
-    function(...) {
-      if (!any(mtime() > l)) return(FALSE)
+    l = max(m <- mtime())  # record the latest timestamp of files
+    r = servr:::is_rstudio(); info = if (r) slide_context()
+    function(message) {
+      m2 = mtime(); u = !any(m2 > l)
+      # when running inside RStudio and only Rmd is possibly changed
+      if (u) {
+        if (!r || missing(message)) return(FALSE)
+        ctx = rstudioapi::getSourceEditorContext()
+        if (identical(normalize_path(as.character(ctx[['path']])), moon)) {
+          if (isTRUE(message[['focused']])) {
+            # auto-navigate to the slide source corresponding to current HTML
+            # page only when the slides are on focus
+            slide_navigate(ctx, message)
+          } else {
+            # navigate to HTML page and update it incrementally if necessary
+            info2 = slide_context(ctx)
+            # incremental update only if the total number of pages (N) matches
+            if (!is.null(info2) && identical(message$N, info2$N)) {
+              on.exit(info <<- info2, add = TRUE)
+              return(list(page = info2$n, markdown = if (
+                identical(info$c, info2$c) || is.null(info2$c) || !identical(info$n, info2$n)
+              ) FALSE else process_slide(info2$c)))
+            }
+          }
+        }
+        return(FALSE)
+      }
+      l <<- max(m2)
       # moon or dependencies have been updated, recompile and reload in browser
-      rebuild()
-      l <<- max(mtime())
+      if (p || tail(m2, 1) > tail(m, 1)) {
+        rebuild(); if (r) info <<- slide_context()
+      }
+      l <<- max(m <<- mtime())
       TRUE
     }
   })
@@ -267,7 +294,9 @@ infinite_moon_reader = function(moon, cast_from = '.') {
       "the HTML output is not under this directory. Using '", d, "' instead."
     )
   }
-  servr:::dynamic_site(d, initpath = f, build = build)
+  servr:::dynamic_site(
+    d, initpath = f, build = build, ws_handler = pkg_resource('js', 'ws-handler.js')
+  )
 }
 
 #' @export
@@ -301,7 +330,7 @@ inf_mr = infinite_moon_reader
 #' @return The output file path (invisibly).
 #' @export
 #' @examples if (interactive()) {
-#'   xaringan::decktape('https://slides.yihui.name/xaringan', 'xaringan.pdf', docker = FALSE)
+#'   xaringan::decktape('https://slides.yihui.org/xaringan', 'xaringan.pdf', docker = FALSE)
 #' }
 decktape = function(
   file, output, args = '--chrome-arg=--allow-file-access-from-files',

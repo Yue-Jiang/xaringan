@@ -1,6 +1,54 @@
+# CHANGES IN xaringan VERSION 0.14
+
+## NEW FEATURES
+
+- Added a theme following the Karolinska Institutet design guidelines (@ellessenne, #238).
+
+- Added the argument `params` to `infinite_moon_reader()` (@paulklemm, #240).
+
+## BUG FIXES
+
+- Removed the `xmlns` attribute in the `<html>` tag in the default HTML template (thanks, @pat-s, #197).
+
+# CHANGES IN xaringan VERSION 0.13
+
+## NEW FEATURES
+
+- In the `metropolis` theme, added support for automatic orange break lines under the subtitle in the title slide and in `inverse` slides using the new class `mline` (@Enchufa2, #231).
+
+## BUG FIXES
+
+- In the `metropolis` theme, fixed titles to look the same everywhere, and added support to gray out non-active h2 and h3 titles in a `.left-column` (@Enchufa2, #229).
+
+# CHANGES IN xaringan VERSION 0.12
+
+## NEW FEATURES
+
+- Added the class `.remark-code-has-line-highlighted` to the `<pre>` parent element containing code with highlighted lines (@gadenbuie, #220).
+
+# CHANGES IN xaringan VERSION 0.11
+
+## BUG FIXES
+
+- `{{ }}` in source code could incorrectly highlight a line when `}}` is not at the end of a line (thanks, @filipwastberg, #215).
+
+# CHANGES IN xaringan VERSION 0.10
+
+## NEW FEATURES
+
+- Added the ability to specify an `institute` in the YAML header that is automatically added to the title slide (@paullemmens, #200).
+
+## BUG FIXES
+
+- The Infinite Moon Reader (`xaringan::inf_mr()`) didn't take slide properties `layout: true` and `exclude: true` into consideration (thanks, @fmmattioni, #198).
+
 # CHANGES IN xaringan VERSION 0.9
 
 ## NEW FEATURES
+
+- The Infinite Moon Reader (`xaringan::inf_mr()`) has been significantly enhanced for a much smoother user experience of authoring slides with the `xaringan::moon_reader` format in RStudio. The preview of the current slide will be instant (as you type in the RStudio editor), and the navigation in the source editor will be linked to the navigation of slides output. See https://yihui.org/en/2019/02/ultimate-inf-mr/ for details.
+
+- When printing slides to PDF, only the last slide of a series of incremental slides will be printed (thanks, @sebpardo @@benjie, #192).
 
 - Added a function `decktape()` to export slides to PDF via the DeckTape library (thanks, @pat-s, #177).
 
@@ -9,6 +57,12 @@
 - Added a CSS theme `fc` (thanks, @Yue-Jiang, #189).
 
 - `xaringan::inf_mr()` can detect changes in CSS/JS and common images now. When any of these files are changed, it will rebuild the Rmd document and reload the output in the browser (thanks, @mrchypark @tcgriffith, #185).
+
+- External links (URLs starting with `http://` or `https://`) on slides will be opened in new browser tabs/windows.
+
+## BUG FIXES
+
+- Fixed several long-lasting issues related to MathJax fonts and printing to PDF (#62, #73, #143, #148, #168).
 
 # CHANGES IN xaringan VERSION 0.8
 
@@ -62,9 +116,9 @@
 
 - The default CSS file was split into two files default.css and default-fonts.css to make it easier to define custom font styles without copying all base CSS definitions. For example, the `css` argument of `xaringan::moon_reader` can take a vector of `default` and `extra.css`, and you define your custom font styles in `extra.css`.
 
-- For the `css` argument, if a value does not end with `.css`, it is assumed to be a built-in CSS file in this package. Currently all available CSS files can be found at https://github.com/yihui/xaringan/tree/master/inst/rmarkdown/templates/xaringan/resources. See `?xaringan::moon_reader` for more details. This change was to make it easier for users to contribute custom themes (https://yihui.name/en/2017/10/xaringan-themes/).
+- For the `css` argument, if a value does not end with `.css`, it is assumed to be a built-in CSS file in this package. Currently all available CSS files can be found at https://github.com/yihui/xaringan/tree/master/inst/rmarkdown/templates/xaringan/resources. See `?xaringan::moon_reader` for more details. This change was to make it easier for users to contribute custom themes (https://yihui.org/en/2017/10/xaringan-themes/).
 
-- Added a new sub-option `beforeInit` under the `nature` option, which can be used to specify JavaScript files to be executed before the instantiation of slides (i.e., before `remark.create()`). One application of this new feature is to define custom remark.js macros; see the slide "Macros" at https://slides.yihui.name/xaringan/ for more info (thanks, @gavinsimpson, #80).
+- Added a new sub-option `beforeInit` under the `nature` option, which can be used to specify JavaScript files to be executed before the instantiation of slides (i.e., before `remark.create()`). One application of this new feature is to define custom remark.js macros; see the slide "Macros" at https://slides.yihui.org/xaringan/ for more info (thanks, @gavinsimpson, #80).
 
 - Line highlighting can also be turned on using a special comment `#<<` at the end of a line of code now (thanks, @gadenbuie, #103).
 
@@ -84,7 +138,7 @@
 
 ## NEW FEATURES
 
-- A new option `countdown` in the `nature` option of `moon_reader()` can be set so that a countdown timer is added to each page of slides. See `?xaringan::moon_reader` and https://slides.yihui.name/xaringan/ for more information (thanks, @slopp, #43).
+- A new option `countdown` in the `nature` option of `moon_reader()` can be set so that a countdown timer is added to each page of slides. See `?xaringan::moon_reader` and https://slides.yihui.org/xaringan/ for more information (thanks, @slopp, #43).
 
 # CHANGES IN xaringan VERSION 0.2
 
@@ -108,4 +162,4 @@
 
 ## NEW FEATURES
 
-- Initial CRAN release. See the documentation at https://slides.yihui.name/xaringan/
+- Initial CRAN release. See the documentation at https://slides.yihui.org/xaringan/
